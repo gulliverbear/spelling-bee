@@ -126,14 +126,36 @@ def get_words(date_string, user_agent, file, log_file):
 
 def decode_image(date_string, user_agent, log_file, possible_keys):
     '''
-    To Do:
     Given: date_string like '20190101'
     Download the image for that date
     Try to cut out the middle part that should have the key letter
     Issue is the images changed size at certain dates
     Then use pytesseract to read that letter
     '''
-    pass
+    # download the image
+    pic_name = download_image(date_string, user_agent, log_file)
+    if not pic_name:
+        with open(log_file, 'a') as f:
+            f.write('No image was saved\n')
+        return
+    
+    im = Image.open(pic_name)
+    width, height = im.size
+    delta=20 # how far move from center of image
+    # left upper right lower
+    crop_rectangle = (width/2-delta, height/2-delta, width/2+delta, height/2+delta)
+    cropped_im = im.crop(crop_rectangle)
+
+    #cropped_im.save(f'{date_string}-cropped.png')
+    char = pytesseract.image_to_string(cropped_im, lang='eng', config='--psm 10')
+    char = char.lower()
+
+    # double-check that the decoded char is a possible key
+    if char not in possible_keys:
+        sys.exit(f'decoded image {char} not a possible key {possible_keys}')
+    with open(log_file, 'a') as f:
+        f.write(f'--- decoded image to be {char} ---\n')
+    return char
 
 def download_image(date_string, user_agent, log_file):
     '''
